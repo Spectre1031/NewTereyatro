@@ -11,68 +11,81 @@ import androidx.compose.material3.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.myapplication.R
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.remember
-import androidx.compose.ui.draw.clip
-import androidx.navigation.compose.rememberNavController
-import com.example.myapplication.AnimatedNavigationBar
-import com.example.myapplication.MovieRepository
-import com.example.myapplication.Movie
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
-
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.rememberCoroutineScope
+import coil.compose.AsyncImage
+import com.example.myapplication.ui.theme.appBackgroundColor
+import kotlinx.coroutines.launch
 
 @Composable
-fun MovieDetailsPage(navController: NavHostController, movieId: String, onBackClick: () -> Unit = {}) {
+fun MovieDetailsPage(
+    navController: NavHostController,
+    movieId: String,
+    onBackClick: () -> Unit = {}
+) {
     val movie = remember(movieId) {
         MovieRepository.movies.find { it.id == movieId }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope    = rememberCoroutineScope()
+
     Scaffold(
-        bottomBar = {
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        bottomBar    = {
             AnimatedNavigationBar(
-                navController = navController,
-                currentRoute = Screen.MovieDetails.route,
-                onNavigate = { route -> navController.navigate(route) }
+                navController  = navController,
+                currentRoute   = Screen.MovieDetails.route,
+                onNavigate     = { route -> navController.navigate(route) }
             )
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(appBackgroundColor())
                 .padding(horizontal = 16.dp)
-                .padding(padding)
+                .padding()
         ) {
-            item { Header(onBackClick) }
+            item {
+                Header(
+                    onBackClick = onBackClick,
+                    onAddToWatchlist = {
+                        movie?.let { m ->
+                            coroutineScope.launch {
+                                MovieRepository.addToWatchlist(m.id)
+                                snackbarHostState.showSnackbar(
+                                    "${m.title} added to watchlist"
+                                )
+                            }
+                        }
+                    }
+                )
+            }
             item { MediaSection(movie) }
             item { ActionButtonsSection() }
             item { SynopsisSection(movie) }
             item { ActorsSection() }
             item {
-                PostersByDatesSection { movieId ->
-                    navController.navigate(Screen.MovieDetails.createRoute(movieId))
+                PostersByDatesSection { id ->
+                    navController.navigate(Screen.MovieDetails.createRoute(id))
                 }
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -80,44 +93,48 @@ fun MovieDetailsPage(navController: NavHostController, movieId: String, onBackCl
     }
 }
 
+private fun SnackbarHostState.showSnackbar(text: String) {}
+
 @Composable
-fun Header(onBackClick: () -> Unit) {
+private fun Header(
+    onBackClick: () -> Unit,
+    onAddToWatchlist: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment     = Alignment.CenterVertically
     ) {
+        // Back button (unchanged)
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
                 .size(40.dp)
-                .background(Color.White.copy(alpha = 0.8f), CircleShape)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_back),
+                painter           = painterResource(id = R.drawable.ic_back),
                 contentDescription = "Back",
-                tint = Color.Red,
-                modifier = Modifier.size(30.dp)
+                modifier           = Modifier.size(30.dp)
             )
         }
 
+        // Add-to-Watchlist button (shows Snackbar on tap)
         IconButton(
-            onClick = { },
+            onClick = onAddToWatchlist,
             modifier = Modifier
                 .size(40.dp)
-                .background(Color.White.copy(alpha = 0.8f), CircleShape)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_watchlist),
-                contentDescription = "Add to Watchlist",
-                tint = Color.Red,
-                modifier = Modifier.size(30.dp)
+                painter           = painterResource(id = R.drawable.ic_watchlist),
+                contentDescription = "Save to Watchlist",
+                modifier           = Modifier.size(30.dp)
             )
         }
     }
 }
+
 
 @Composable
 fun MediaSection(movie: Movie?) {
@@ -130,24 +147,26 @@ fun MediaSection(movie: Movie?) {
         val context = LocalContext.current
         val imageId = remember(movie?.imageName) {
             movie?.let {
-                context.resources.getIdentifier(it.imageName, "drawable", context.packageName)
+                context.resources.getIdentifier(
+                    it.imageName, "drawable", context.packageName
+                )
             } ?: R.drawable.bignight
         }
-        val painter = painterResource(id = imageId)
 
-        Image(
-            painter = painter,
-            contentDescription = "Movie Media",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+        AsyncImage(
+            model               = imageId,
+            contentDescription  = movie?.title.orEmpty(),
+            contentScale        = ContentScale.Crop,
+            modifier            = Modifier.fillMaxSize()
         )
 
+        // gradient overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(
                             Color.Black.copy(alpha = 0.5f),
                             Color.Black.copy(alpha = 0.7f)
                         )
@@ -155,22 +174,26 @@ fun MediaSection(movie: Movie?) {
                 )
         )
 
+        // play button
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .size(64.dp)
-                .background(Color.Black.copy(alpha = 0.8f), CircleShape),
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.8f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_play),
+                painter           = painterResource(id = R.drawable.ic_play),
                 contentDescription = "Play",
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
+                tint               = Color.White,
+                modifier           = Modifier.size(32.dp)
             )
         }
     }
 }
+
+
 
 @Composable
 fun ActionButtonsSection() {
@@ -239,7 +262,6 @@ fun ActorsSection() {
             text = "Actors",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = Color.Black,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -296,7 +318,6 @@ fun PostersByDatesSection(onPosterClick: (String) -> Unit) {
                 text = "2022 Entries",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
             LazyRow(
@@ -340,7 +361,6 @@ fun PostersByDatesSection(onPosterClick: (String) -> Unit) {
                 text = "2023 Entries",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
             LazyRow(

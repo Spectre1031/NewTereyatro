@@ -1,23 +1,20 @@
 package com.example.myapplication
 
-import android.content.res.Configuration
-import android.net.http.SslCertificate.restoreState
-import android.net.http.SslCertificate.saveState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -29,108 +26,57 @@ fun AnimatedNavigationBar(
     currentRoute: String,
     onNavigate: (String) -> Unit
 ) {
+    // Define your tabs
     val navigationItems = listOf(
-        NavigationItem(Screen.Home.route, "Home", R.drawable.ic_home, 30.dp),
-        NavigationItem(Screen.Search.route, "Search", R.drawable.ic_search, 24.dp),
-        NavigationItem(Screen.Watchlist.route, "Watchlist", R.drawable.ic_watchlist, 24.dp),
-        NavigationItem(Screen.Language.route, "Language", R.drawable.ic_change_language, 35.dp)
+        NavigationItem(Screen.Home.route,      R.drawable.ic_home,            24.dp),
+        NavigationItem(Screen.Search.route,    R.drawable.ic_search,          24.dp),
+        NavigationItem(Screen.Watchlist.route, R.drawable.ic_watchlist,       24.dp),
+        NavigationItem(Screen.Language.route,  R.drawable.ic_change_language, 24.dp)
     )
 
-    val configuration = LocalConfiguration.current
-    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val barColor = if (isSystemInDarkTheme()) Color(0xFF121212) else Color(0xFFFFFFFF)
 
-    val darkRed = Color(0xFF8B0000)
+    NavigationBar(
+        modifier      = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp)),
+        containerColor = barColor,
+        tonalElevation = 8.dp
+    ) {
+        navigationItems.forEach { item ->
+            val isSelected = currentRoute == item.route
 
-    if (isPortrait) {
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-        ) {
-            NavigationBar(
-                containerColor = darkRed,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(70.dp)
-            ) {
-                navigationItems.forEach { item ->
-                    val isSelected = currentRoute == item.route
-                    val iconColor by animateColorAsState(
-                        targetValue = if (isSelected) Color.White else Color.LightGray,
-                        animationSpec = tween(300)
-                    )
+            // ② animate icon color
+            val iconTint by animateColorAsState(
+                targetValue   = if (isSelected) Color.Black else Color.LightGray,
+                animationSpec = tween(durationMillis = 300)
+            )
 
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                painter = painterResource(id = item.icon),
-                                contentDescription = item.description,
-                                modifier = Modifier.size(item.iconSize),
-                                tint = iconColor
-                            )
-                        },
-                        selected = isSelected,
-                        onClick = {
-                            if (!isSelected) {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = darkRed
-                        )
-                    )
-                }
-            }
-        }
-    } else {
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(80.dp)
-                .background(darkRed),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            navigationItems.forEach { item ->
-                val isSelected = currentRoute == item.route
-                val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) Color.White else Color.LightGray,
-                    animationSpec = tween(300)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 16.dp)
-                        .clickable {
-                            if (!isSelected) {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
+            NavigationBarItem(
+                modifier = Modifier.weight(1f),
+                selected      = isSelected,
+                onClick       = { if (!isSelected) onNavigate(item.route) },
+                colors        = NavigationBarItemDefaults.colors(
+                    selectedIconColor   = Color.Red,
+                    unselectedIconColor = Color.LightGray,
+                    indicatorColor      = Color.Transparent
+                ),
+                icon          = {
                     Icon(
-                        painter = painterResource(id = item.icon),
-                        contentDescription = item.description,
-                        modifier = Modifier.size(item.iconSize),
-                        tint = iconColor
+                        painter           = painterResource(id = item.icon),
+                        contentDescription = item.route,
+                        tint               = iconTint,
+                        modifier           = Modifier.size(item.iconSize)
                     )
                 }
-            }
+            )
         }
     }
 }
 
-data class NavigationItem(val route: String, val description: String, val icon: Int, val iconSize: Dp)
+data class NavigationItem(
+    val route: String,
+    val icon: Int,
+    val iconSize: Dp
+)

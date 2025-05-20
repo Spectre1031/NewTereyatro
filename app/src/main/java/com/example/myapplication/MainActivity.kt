@@ -74,19 +74,20 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             }
                         }
+                        composable(Screen.Search.route) { backStackEntry ->
+                            val movieViewModel: MovieViewModel = viewModel(backStackEntry)
 
-                        composable(Screen.Search.route) {
-                            SearchScreen(
+                            SearchPage(
                                 onBackClick = { navController.popBackStack() },
                                 onNavigateToMovieInfo = { movieId ->
                                     val route = Screen.MovieDetails.createRoute(movieId)
-                                    Log.d("NavigationTest", "Navigating to: $route")
                                     navController.navigate(route)
                                 },
                                 onNavigateToWatchlist = {
                                     navController.navigate(Screen.Watchlist.route)
                                 },
-                                navController = navController
+                                navController = navController,
+                                movieViewModel = movieViewModel
                             )
                         }
 

@@ -1,8 +1,9 @@
 package com.example.myapplication
 
-import androidx.annotation.DrawableRes
-import com.example.myapplication.R
-import com.example.myapplication.Movie
+import androidx.compose.runtime.mutableStateListOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 
 data class Movie(
     val id: String,
@@ -136,8 +137,42 @@ object MovieRepository {
         Movie("2024006", "uninvited", 2024,
             "Uninvited (2024)", "A psychological thriller that follows the story of a woman who becomes entangled in a series of disturbing events after a traumatic incident."
         ),
-        Movie("2024007", "filler_image", 2024,
+        Movie("2024007", "andthebreadwinneris", 2024,
             "And The Breadwinner Is... (2024)", "A film that focuses on a breadwinner and her family, which serves as a tribute to the unsung heroes who carry the weight of their loved ones' dreams on their shoulders."
         )
     )
+
+    private val _watchlistIds = mutableStateListOf<String>()
+    val watchlistIds: List<String> get() = _watchlistIds
+
+    // --- Flow of full Movie objects in the watchlist, driven by DataStore ---
+    val watchlistFlow: Flow<List<Movie>> =
+        WatchlistStore.watchlistIdsFlow
+            .onEach { ids ->
+                _watchlistIds.apply {
+                    clear()
+                    addAll(ids)
+                }
+            }
+            .map { ids ->
+                movies.filter { it.id in ids }
+            }
+            .stateIn(
+                scope = CoroutineScope(Dispatchers.IO),
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList()
+            )
+
+    // --- suspending functions to add/remove in both DataStore and memory ---
+    suspend fun addToWatchlist(id: String) {
+        WatchlistStore.add(id)
+        if (id !in _watchlistIds) _watchlistIds.add(id)
+    }
+
+    suspend fun removeFromWatchlist(id: String) {
+        WatchlistStore.remove(id)
+        _watchlistIds.remove(id)
+    }
 }
+
+

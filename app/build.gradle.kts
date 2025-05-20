@@ -43,8 +43,9 @@ dependencies {
 
     implementation("androidx.compose.material3:material3:1.3.2")
     val nav_version = "2.7.7"
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.navigation:navigation-compose:$nav_version")
-
+    implementation("io.coil-kt:coil-compose:2.4.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
