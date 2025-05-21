@@ -30,25 +30,20 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun WatchlistScreen(
-    onBackClick: () -> Unit,
     onNavigateToMovieDetails: (String) -> Unit,
     navController: NavHostController
 ) {
-    // 1) collect as state from the repository's Flow, with an initial empty list
     val watchlistMovies by MovieRepository.watchlistFlow.collectAsState(initial = emptyList())
 
-    // 2) for showing snackbars & launching suspend calls
     val snackbarHostState = remember { SnackbarHostState() }
     val scope             = rememberCoroutineScope()
 
-    // 3) local UI state for edit mode
     var isEditMode by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = appBackgroundColor(),
         topBar = {
             WatchlistHeader(
-                onBackClick      = onBackClick,
                 isEditMode       = isEditMode,
                 onEditModeToggle = { isEditMode = !isEditMode }
             )
@@ -84,11 +79,11 @@ fun WatchlistScreen(
                     movie                    = movie,
                     isEditMode               = isEditMode,
                     onRemove                 = { removedId ->
-                        // launch suspend remove call
                         scope.launch {
                             MovieRepository.removeFromWatchlist(removedId)
                             snackbarHostState.showSnackbar(
-                                "Removed \"${movie.title}\" from watchlist."
+                                message = "Removed \"${movie.title}\" from watchlist.",
+                                duration = SnackbarDuration.Short
                             )
                         }
                     },
@@ -102,25 +97,16 @@ fun WatchlistScreen(
 
 @Composable
 private fun WatchlistHeader(
-    onBackClick: () -> Unit,
     isEditMode: Boolean,
     onEditModeToggle: () -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBackClick) {
-            Icon(
-                painter           = painterResource(id = R.drawable.ic_back),
-                contentDescription = "Back",
-                modifier           = Modifier.size(30.dp)
-            )
-        }
-
         Text(
             text     = if (isEditMode) "Remove from Watchlist" else "Your Watchlist",
             fontSize = 18.sp,

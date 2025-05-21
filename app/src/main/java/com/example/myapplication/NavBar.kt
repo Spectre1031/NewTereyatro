@@ -49,7 +49,7 @@ fun AnimatedNavigationBar(
 
             // ② animate icon color
             val iconTint by animateColorAsState(
-                targetValue   = if (isSelected) Color.Black else Color.LightGray,
+                targetValue   = if (isSelected) Color.DarkGray else Color.LightGray,
                 animationSpec = tween(durationMillis = 300)
             )
 

@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
 
                         composable(Screen.Watchlist.route) {
                             WatchlistScreen(
-                                onBackClick = { navController.popBackStack() },
+
                                 onNavigateToMovieDetails = { movieId ->
                                     val route = Screen.MovieDetails.createRoute(movieId)
                                     Log.d("NavigationTest", "Navigating to: $route")

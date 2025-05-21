@@ -10,11 +10,19 @@ class MovieViewModel : ViewModel() {
     val searchResults: StateFlow<List<Movie>> = _searchResults
 
     fun performSearch(query: String) {
-        val t = query.trim()
+        val terms = query
+            .trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
         _searchResults.value =
-            if (t.isBlank()) MovieRepository.movies
-            else MovieRepository.movies.filter {
-                it.title.startsWith(t, ignoreCase = true)
+            if (terms.isEmpty()) {
+                MovieRepository.movies
+            } else {
+                MovieRepository.movies.filter { movie ->
+                    terms.all { term ->
+                        movie.title.contains(term, ignoreCase = true)
+                    }
+                }
             }
     }
 }

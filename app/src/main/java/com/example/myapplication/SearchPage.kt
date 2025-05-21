@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -33,6 +35,12 @@ fun SearchPage(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope             = rememberCoroutineScope()
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val columns = if (isLandscape) 4 else 2
+    val aspect = if (isLandscape) 0.55f else 0.67f
+
     var query        by remember { mutableStateOf("") }
     var selectedYear by remember { mutableStateOf<Int?>(null) }
     var expanded     by remember { mutableStateOf(false) }
@@ -47,7 +55,7 @@ fun SearchPage(
     }
 
     val afterQuery = if (query.isBlank()) movieState
-    else movieState.filter { it.title.startsWith(query, ignoreCase = true) }
+    else movieState.filter { it.title.contains(query, ignoreCase = true) }
 
     val filteredMovies = selectedYear
         ?.let { year -> afterQuery.filter { it.year == year } }
@@ -75,82 +83,66 @@ fun SearchPage(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        painter           = painterResource(R.drawable.ic_back),
-                        contentDescription = "Back",
-                        modifier        = Modifier.size(30.dp)
+                OutlinedTextField(
+                    value            = query,
+                    onValueChange    = { query = it; movieViewModel.performSearch(it) },
+                    modifier         = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .padding(),
+                    placeholder      = { Text("Search") },
+                    leadingIcon      = {
+                        Icon(
+                            painter           = painterResource(R.drawable.ic_search),
+                            contentDescription = "Search",
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    trailingIcon     = {
+                        Box {
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(
+                                    painter           = painterResource(R.drawable.ic_filter),
+                                    contentDescription = "Filter by Year",
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded        = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                // "All years" option
+                                DropdownMenuItem(
+                                    text    = { Text("All years") },
+                                    onClick = {
+                                        selectedYear = null
+                                        expanded = false
+                                    }
+                                )
+                                // One item per year
+                                allYears.forEach { year ->
+                                    DropdownMenuItem(
+                                        text    = { Text(year.toString()) },
+                                        onClick = {
+                                            selectedYear = year
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    singleLine       = true,
+                    shape            = RoundedCornerShape(24.dp),
+                    colors           = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor   = MaterialTheme.colorScheme.primary
                     )
-                }
-                IconButton(onClick = onNavigateToWatchlist) {
-                    Icon(
-                        painter           = painterResource(R.drawable.ic_watchlist),
-                        contentDescription = "Watchlist",
-                        modifier        = Modifier.size(30.dp)
-                    )
-                }
+                )
             }
 
             Spacer(Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value            = query,
-                onValueChange    = { query = it; movieViewModel.performSearch(it) },
-                modifier         = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .padding(horizontal = 16.dp),
-                placeholder      = { Text("Search") },
-                leadingIcon      = {
-                    Icon(
-                        painter           = painterResource(R.drawable.ic_search),
-                        contentDescription = "Search",
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
-                trailingIcon     = {
-                    Box {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(
-                                painter           = painterResource(R.drawable.ic_filter),
-                                contentDescription = "Filter by Year",
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded        = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            // "All years" option
-                            DropdownMenuItem(
-                                text    = { Text("All years") },
-                                onClick = {
-                                    selectedYear = null
-                                    expanded = false
-                                }
-                            )
-                            // One item per year
-                            allYears.forEach { year ->
-                                DropdownMenuItem(
-                                    text    = { Text(year.toString()) },
-                                    onClick = {
-                                        selectedYear = year
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                },
-                singleLine       = true,
-                shape            = RoundedCornerShape(24.dp),
-                colors           = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface,
-                    focusedBorderColor   = MaterialTheme.colorScheme.primary
-                )
-            )
-
-            // ── Optional indicator of current filter ────────────
             selectedYear?.let { year ->
                 Text(
                     text  = "Showing: $year entries",
@@ -163,7 +155,7 @@ fun SearchPage(
 
             // ── Movie Grid ──────────────────────────────────────
             LazyVerticalGrid(
-                columns               = GridCells.Fixed(2),
+                columns               = GridCells.Fixed(columns),
                 contentPadding        = PaddingValues(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement   = Arrangement.spacedBy(12.dp),
@@ -172,7 +164,7 @@ fun SearchPage(
                 items(filteredMovies) { movie ->
                     Box(
                         Modifier
-                            .aspectRatio(0.67f)
+                            .aspectRatio(aspect)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { onNavigateToMovieInfo(movie.id) }
                     ) {

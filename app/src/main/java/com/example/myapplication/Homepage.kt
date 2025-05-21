@@ -25,7 +25,6 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.myapplication.ui.theme.appBackgroundColor
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 @Composable
 fun HomePage(
@@ -99,7 +98,7 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState,
     coroutineScope: CoroutineScope,
-    onQueryChanged: (String) -> Unit    // ← new callback
+    onQueryChanged: (String) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
 
@@ -117,19 +116,6 @@ fun SearchBar(
                 contentDescription = "Search Icon",
                 modifier           = Modifier.size(20.dp)
             )
-        },
-        trailingIcon     = {
-            IconButton(onClick = {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Filter feature is not yet available")
-                }
-            }) {
-                Icon(
-                    painter           = painterResource(id = R.drawable.ic_filter),
-                    contentDescription = "Filter",
-                    modifier           = Modifier.size(20.dp)
-                )
-            }
         },
         singleLine       = true,
         shape            = RoundedCornerShape(25.dp),
@@ -151,53 +137,57 @@ fun MovieGrid(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         rowYears.forEach { year ->
-            Text(
-                text     = "$year MMFF Entries",
-                style    = MaterialTheme.typography.titleMedium.copy(
-                    fontSize   = 20.sp,
-                    fontWeight = FontWeight.ExtraBold
-                ),
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
 
             val rowMovies = movies.filter { it.year == year }
 
-            LazyRow(
-                modifier            = Modifier.fillMaxWidth(),
-                contentPadding      = PaddingValues(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(rowMovies) { movie ->
-                    Box(
-                        modifier = Modifier
-                            .width(140.dp)
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onNavigateToMovieInfo(movie.id) }
-                    ) {
-                        val context = LocalContext.current
-                        val imageId = remember(movie.imageName) {
-                            context.resources.getIdentifier(
-                                movie.imageName,
-                                "drawable",
-                                context.packageName
-                            )
-                        }
-                        if (imageId != 0) {
-                            AsyncImage(
-                                model               = imageId,
-                                contentDescription  = movie.title,
-                                contentScale        = ContentScale.Crop,
-                                modifier            = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Box(
-                                modifier        = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Gray),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No Image", color = Color.White)
+            if(rowMovies.isNotEmpty()) {
+                Text(
+                    text     = "$year MMFF Entries",
+                    style    = MaterialTheme.typography.titleMedium.copy(
+                        fontSize   = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+
+                LazyRow(
+                    modifier            = Modifier.fillMaxWidth(),
+                    contentPadding      = PaddingValues(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(rowMovies) { movie ->
+                        Box(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onNavigateToMovieInfo(movie.id) }
+                        ) {
+                            val context = LocalContext.current
+                            val imageId = remember(movie.imageName) {
+                                context.resources.getIdentifier(
+                                    movie.imageName,
+                                    "drawable",
+                                    context.packageName
+                                )
+                            }
+                            if (imageId != 0) {
+                                AsyncImage(
+                                    model               = imageId,
+                                    contentDescription  = movie.title,
+                                    contentScale        = ContentScale.Crop,
+                                    modifier            = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Box(
+                                    modifier        = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Gray),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("No Image", color = Color.White)
+                                }
                             }
                         }
                     }

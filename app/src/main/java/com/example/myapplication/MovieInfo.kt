@@ -1,5 +1,7 @@
 package com.example.myapplication
 
+import android.R.fraction
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,9 +32,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalConfiguration
 import coil.compose.AsyncImage
 import com.example.myapplication.ui.theme.appBackgroundColor
 import kotlinx.coroutines.launch
+
 
 @Composable
 fun MovieDetailsPage(
@@ -79,10 +83,52 @@ fun MovieDetailsPage(
                     }
                 )
             }
-            item { MediaSection(movie) }
-            item { ActionButtonsSection() }
-            item { SynopsisSection(movie) }
-            item { ActorsSection() }
+            item {
+                val cfg         = LocalConfiguration.current
+                val isLandscape = cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+                if (isLandscape) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        // Poster on left
+                        MediaSection(
+                            movie = movie,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(430.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+
+                        Spacer(Modifier.width(16.dp))
+
+                        // Text / genres / actors on right
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            verticalArrangement = Arrangement.Top
+                        ) {
+                            SynopsisSection(movie)
+                            Spacer(Modifier.height(16.dp))
+                            ActionButtonsSection()
+                            Spacer(Modifier.height(16.dp))
+                            ActorsSection()
+                        }
+                    }
+                } else {
+                    // Portrait: original vertical stack
+                    MediaSection(movie = movie, modifier = Modifier)
+                    Spacer(Modifier.height(16.dp))
+                    ActionButtonsSection()
+                    Spacer(Modifier.height(16.dp))
+                    SynopsisSection(movie)
+                    Spacer(Modifier.height(16.dp))
+                    ActorsSection()
+                }
+            }
             item {
                 PostersByDatesSection { id ->
                     navController.navigate(Screen.MovieDetails.createRoute(id))
@@ -107,7 +153,6 @@ private fun Header(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically
     ) {
-        // Back button (unchanged)
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
@@ -120,7 +165,7 @@ private fun Header(
             )
         }
 
-        // Add-to-Watchlist button (shows Snackbar on tap)
+        // Add-to-Watchlist button
         IconButton(
             onClick = onAddToWatchlist,
             modifier = Modifier
@@ -137,11 +182,17 @@ private fun Header(
 
 
 @Composable
-fun MediaSection(movie: Movie?) {
+fun MediaSection(movie: Movie?, modifier: Modifier) {
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val height = if (isLandscape) 300.dp else 300.dp
+    val width = if (isLandscape) 0.5f else 1f
+
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
+        modifier = modifier
+            .fillMaxWidth(fraction = width)
+            .height(height)
             .clip(RoundedCornerShape(16.dp))
     ) {
         val context = LocalContext.current
@@ -174,7 +225,6 @@ fun MediaSection(movie: Movie?) {
                 )
         )
 
-        // play button
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -342,13 +392,11 @@ fun PostersByDatesSection(onPosterClick: (String) -> Unit) {
                                 context.packageName
                             )
                         }
-                        val painter = painterResource(id = imageId)
-
-                        Image(
-                            painter = painter,
-                            contentDescription = movieItem.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
+                        AsyncImage(
+                            model               = imageId,
+                            contentDescription  = movieItem.title,
+                            contentScale        = ContentScale.Crop,
+                            modifier            = Modifier.fillMaxSize()
                         )
                     }
                 }
@@ -385,13 +433,11 @@ fun PostersByDatesSection(onPosterClick: (String) -> Unit) {
                                 context.packageName
                             )
                         }
-                        val painter = painterResource(id = imageId)
-
-                        Image(
-                            painter = painter,
-                            contentDescription = movieItem.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
+                        AsyncImage(
+                            model               = imageId,
+                            contentDescription  = movieItem.title,
+                            contentScale        = ContentScale.Crop,
+                            modifier            = Modifier.fillMaxSize()
                         )
                     }
                 }
