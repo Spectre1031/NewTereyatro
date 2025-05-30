@@ -1,9 +1,12 @@
-package com.example.myapplication
+package com.example.myapplication.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -18,15 +21,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import com.example.myapplication.R
+import com.example.myapplication.Screen
 
 @Composable
 fun AnimatedNavigationBar(
-    navController: NavController,
+    navController: NavHostController,
     currentRoute: String,
     onNavigate: (String) -> Unit
 ) {
-    // Define your tabs
     val navigationItems = listOf(
         NavigationItem(Screen.Home.route,      R.drawable.ic_home,            24.dp),
         NavigationItem(Screen.Search.route,    R.drawable.ic_search,          24.dp),
@@ -46,33 +50,44 @@ fun AnimatedNavigationBar(
     ) {
         navigationItems.forEach { item ->
             val isSelected = currentRoute == item.route
-
-            // ② animate icon color
             val iconTint by animateColorAsState(
                 targetValue   = if (isSelected) Color.DarkGray else Color.LightGray,
-                animationSpec = tween(durationMillis = 300)
+                animationSpec = tween(300)
             )
-
-            NavigationBarItem(
-                modifier = Modifier.weight(1f),
-                selected      = isSelected,
-                onClick       = { if (!isSelected) onNavigate(item.route) },
-                colors        = NavigationBarItemDefaults.colors(
-                    selectedIconColor   = Color.Red,
-                    unselectedIconColor = Color.LightGray,
-                    indicatorColor      = Color.Transparent
-                ),
-                icon          = {
-                    Icon(
-                        painter           = painterResource(id = item.icon),
-                        contentDescription = item.route,
-                        tint               = iconTint,
-                        modifier           = Modifier.size(item.iconSize)
-                    )
-                }
-            )
+            NavItem(item.route, item.icon, item.iconSize, isSelected, iconTint) {
+                if (!isSelected) onNavigate(item.route)
+            }
         }
     }
+}
+
+@Composable
+private fun RowScope.NavItem(
+    route: String,
+    iconRes: Int,
+    iconSize: Dp,
+    selected: Boolean,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    NavigationBarItem(
+        modifier = Modifier.weight(1f),
+        selected      = selected,
+        onClick       = onClick,
+        colors        = NavigationBarItemDefaults.colors(
+            selectedIconColor   = Color.Red,
+            unselectedIconColor = Color.LightGray,
+            indicatorColor      = Color.Transparent
+        ),
+        icon = {
+            Icon(
+                painter           = painterResource(id = iconRes),
+                contentDescription = route,
+                tint               = tint,
+                modifier           = Modifier.size(iconSize)
+            )
+        }
+    )
 }
 
 data class NavigationItem(
