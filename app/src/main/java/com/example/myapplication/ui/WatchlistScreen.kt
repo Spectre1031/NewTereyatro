@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import com.example.myapplication.data.Movie
 import com.example.myapplication.Screen
 import com.example.myapplication.ui.theme.appBackgroundColor
 import com.example.myapplication.viewmodel.MovieViewModel
