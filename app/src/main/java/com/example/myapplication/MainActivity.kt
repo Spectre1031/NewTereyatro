@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
@@ -37,16 +38,28 @@ class MainActivity : ComponentActivity() {
                             SearchPage(navController)
                         }
                         // Watchlist
+                        composable(Screen.Watchlist.route) {
+                            WatchlistScreen(
+                                navController             = navController,
+                                onNavigateToMovieDetails = { movieId ->
+                                    navController.navigate(Screen.MovieDetails.createRoute(movieId.toInt()
+                                        .toString()))
+                                }
+                            )
+                        }
 
-                        // Movie details
+
                         composable(
-                            route = Screen.MovieDetails.route,
+                            route = Screen.MovieDetails.route,            // e.g. "movieDetails/{movieId}"
                             arguments = listOf(navArgument("movieId") {
                                 type = NavType.IntType
                             })
-                        ) { entry ->
-                            val id = entry.arguments!!.getInt("movieId")
-                            MovieInfoPage(id)
+                        ) {
+                            // THIS will instantiate MovieDetailsViewModel and supply 'movieId'
+                            MovieDetailsPage(
+                                navController  = navController,
+                                onBackClick    = { navController.popBackStack() }
+                            )
                         }
                     }
                 }

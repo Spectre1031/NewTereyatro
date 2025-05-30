@@ -9,10 +9,10 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Movie::class],
-    version  = 2,                // <-- bumped
+    version  = 6,                // <-- bumped
     exportSchema = false
 )
-abstract class AppDatabase : RoomDatabase() {
+abstract class      AppDatabase : RoomDatabase() {
     abstract fun movieDao(): MovieDao
 
     companion object {
@@ -25,12 +25,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "movies.db"
                 )
-                    // if you change version, wipe old data so onCreate() fires again:
                     .fallbackToDestructiveMigration()
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
-                            // when the empty DB is first created, insert all sampleMovies:
+
                             CoroutineScope(Dispatchers.IO).launch {
                                 getInstance(ctx)
                                     .movieDao()

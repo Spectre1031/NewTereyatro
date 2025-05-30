@@ -1,4 +1,4 @@
-package com.example.myapplication.viewmodel
+package com.example.myapplication.ui.viewmodel
 
 import androidx.lifecycle.*
 import com.example.myapplication.data.Movie
@@ -7,41 +7,31 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.myapplication.data.MovieDao
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class MovieViewModel @Inject constructor(
-    private val repo: MovieRepository
-) : ViewModel() {
+    private val repo: MovieRepository,
+    savedState: SavedStateHandle
+    ) : ViewModel() {
 
-    // LiveData wrapping the Flow of all movies
     val allMovies: LiveData<List<Movie>> =
-        repo.allMovies.asLiveData()
+        repo.getAllMovies().asLiveData()
 
-    // LiveData wrapping the Flow of watchlist
     val watchlist: LiveData<List<Movie>> =
         repo.watchlist.asLiveData()
 
-    
-
-    // toggle watchlist flag
-    fun addToWatchlist(movie: Movie) = viewModelScope.launch {
-        repo.updateMovie(movie.copy(isWatchlisted = true))
-    }
-
-    fun removeFromWatchlist(movie: Movie) = viewModelScope.launch {
-        repo.updateMovie(movie.copy(isWatchlisted = false))
-    }
-
-    // for Movie Details screen
-    fun movieById(id: Int): LiveData<Movie?> =
-        repo.allMovies
-            .map { list -> list.find { it.movie_id == id } }
-            .asLiveData()
-
-    fun toggleWatchlist(id: Int, watch: Boolean) {
+    fun removeFromWatchlist(id: String) {
         viewModelScope.launch {
-            repo.setWatchlisted(id, watch)
+            repo.removeFromWatchlist(id)
+        }
+
+        fun setWatchlist(id: Int, watch: Boolean) {
+            viewModelScope.launch {
+                repo.setWatchlisted(id, watch)
+            }
         }
     }
 }

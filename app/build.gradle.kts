@@ -33,7 +33,7 @@ android {
 }
 
 val roomVersion       = "2.7.1"
-val lifecycleVersion  = "2.6.0"
+val lifecycleVersion  = "2.6.1"
 val coroutinesVersion = "1.7.0"
 val hiltVersion = "2.51.1"
 val navVersion        = "2.7.7"
@@ -57,6 +57,8 @@ dependencies {
     // --- Lifecycle & LiveData ---
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
 
     // --- Coroutines ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")

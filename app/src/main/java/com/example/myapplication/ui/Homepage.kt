@@ -2,14 +2,16 @@ package com.example.myapplication.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,17 +26,27 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.myapplication.Screen
 import com.example.myapplication.data.Movie
-import com.example.myapplication.viewmodel.MovieViewModel
+import com.example.myapplication.ui.viewmodel.HomeViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePage(
     navController: NavHostController,
-    viewModel: MovieViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val movies      by viewModel.allMovies.observeAsState(emptyList())
+    val isDark = isSystemInDarkTheme()
+
+    // White in dark mode, black in light mode
+    val bgColor      = if (isDark) Color.Black else Color.White
+    // Contrast text/icons: black in dark, white in light
+    val contentColor = if (isDark) Color.White else Color.Black
+
+    val movies by viewModel.allMovies.observeAsState(initial = emptyList())
     var query by remember { mutableStateOf("") }
 
     Scaffold(
+        containerColor = bgColor,
+        contentColor   = contentColor,
         bottomBar = {
             AnimatedNavigationBar(
                 navController = navController,
@@ -42,36 +54,53 @@ fun HomePage(
                 onNavigate    = { route -> navController.navigate(route) }
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .background(bgColor)           // also paint the list background
+                .padding(innerPadding)
         ) {
             item {
                 Text(
                     "TEYATRO",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
+                    color    = contentColor,
+                    style    = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
                     modifier = Modifier.padding(16.dp)
                 )
             }
+
             item {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Search") },
+                    placeholder = { Text("Search", color = contentColor.copy(alpha = 0.6f)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
+                    textStyle = LocalTextStyle.current.copy(color = contentColor),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor    = bgColor,
+                        unfocusedContainerColor  = bgColor,
+                        focusedBorderColor       = contentColor,
+                        unfocusedBorderColor     = contentColor.copy(alpha = 0.6f),
+                        cursorColor              = contentColor,
+                        errorCursorColor         = MaterialTheme.colorScheme.error,
+                        focusedLabelColor        = contentColor,
+                        unfocusedLabelColor      = contentColor.copy(alpha = 0.6f),
+                        focusedLeadingIconColor  = contentColor,
+                        unfocusedLeadingIconColor= contentColor.copy(alpha = 0.6f),
+                        focusedTrailingIconColor = contentColor,
+                        unfocusedTrailingIconColor= contentColor.copy(alpha = 0.6f),
+                    ),
                     shape = RoundedCornerShape(25.dp)
                 )
             }
+
             item {
                 MovieGrid(
-                    movies = movies.filter {
-                        query.isBlank() || it.title.contains(query, ignoreCase = true)
-                    },
+                    movies     = movies.filter { query.isBlank() || it.title.contains(query, ignoreCase = true) },
                     navController = navController,
                     viewModel     = viewModel
                 )
@@ -84,9 +113,9 @@ fun HomePage(
 private fun MovieGrid(
     movies: List<Movie>,
     navController: NavHostController,
-    viewModel: MovieViewModel
+    viewModel: HomeViewModel
 ) {
-    val years = listOf(2020, 2021, 2022, 2023, 2024)
+    val years by viewModel.yearsFlow.collectAsState()
     Column(
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.fillMaxWidth().padding(16.dp)
@@ -110,7 +139,7 @@ private fun MovieGrid(
                                 .height(200.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
-                                    navController.navigate(Screen.MovieDetails.createRoute(movie.movie_id))
+                                    navController.navigate(Screen.MovieDetails.createRoute(movie.id.toString()))
                                 }
                         ) {
                             val ctx = LocalContext.current
@@ -136,21 +165,22 @@ private fun MovieGrid(
                             }
 
                             // watchlist toggle
-                            IconButton(
-                                onClick = {
-                                    if (movie.isWatchlisted) viewModel.removeFromWatchlist(movie)
-                                    else viewModel.addToWatchlist(movie)
-                                },
-                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector =
-                                        if (movie.isWatchlisted) Icons.Filled.Star
-                                        else Icons.Outlined.StarOutline,
-                                    contentDescription = null,
-                                    tint = Color.Yellow,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            if (movie.isWatchlisted) {
+                                IconButton(
+                                    onClick = {
+                                        viewModel.removeFromWatchlist(movie)
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector        = Icons.Filled.Star,
+                                        contentDescription = "Watchlisted",
+                                        tint               = MaterialTheme.colorScheme.primary,
+                                        modifier           = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }

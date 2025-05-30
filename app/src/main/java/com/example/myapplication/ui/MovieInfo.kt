@@ -1,40 +1,370 @@
 package com.example.myapplication.ui
 
+import android.content.res.Configuration
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import com.example.myapplication.R
+import com.example.myapplication.Screen
 import com.example.myapplication.data.Movie
-import com.example.myapplication.viewmodel.MovieViewModel
+import com.example.myapplication.ui.theme.appBackgroundColor
+import com.example.myapplication.ui.viewmodel.MovieDetailsViewModel
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MovieInfoPage(
-    movieId: Int,
-    viewModel: MovieViewModel = hiltViewModel()
+fun MovieDetailsPage(
+    navController: NavHostController,
+    onBackClick: () -> Unit = { navController.popBackStack() },
+    viewModel: MovieDetailsViewModel = hiltViewModel()
 ) {
-    // Observe a single Movie via LiveData
-    val movie by viewModel.movieById(movieId).observeAsState(initial = null)
+    val movie            by viewModel.movieFlow.collectAsState()
 
-    if (movie == null) {
-        Text("Loading…", Modifier.padding(16.dp))
-    } else {
-        val m: Movie = movie!!
-        Column(Modifier.padding(16.dp)) {
-            Text(m.title, style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(8.dp))
-            Text("Genres: ${m.genre_one}, ${m.genre_two}, ${m.genre_three}")
-            Spacer(Modifier.height(8.dp))
-            Text(m.description)
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = {
-                if (m.isWatchlisted) viewModel.removeFromWatchlist(m)
-                else viewModel.addToWatchlist(m)
-            }) {
-                Text(if (m.isWatchlisted) "Remove from Watchlist" else "Add to Watchlist")
+    val snackbarHostState= remember { SnackbarHostState() }
+    val scope            = rememberCoroutineScope()
+    val uriHandler       = LocalUriHandler.current
+
+    // dark/light colors
+    val dark         = isSystemInDarkTheme()
+    val bgColor      = if (dark) Color.Black else Color.White
+    val contentColor = if (dark) Color.White else Color.Black
+
+    val onPlayClick = {
+        val url = movie?.trailerUrl
+        if (!url.isNullOrBlank()) {
+            uriHandler.openUri(url)
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("No trailer available")
+            }
+        }
+    }
+
+    Scaffold(
+        containerColor = bgColor,
+        snackbarHost   = { SnackbarHost(hostState = snackbarHostState) },
+
+        // AppBar with only back + watchlist icons, no title
+        topBar = {
+            TopAppBar(
+                modifier = Modifier.statusBarsPadding(),
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            painter           = painterResource(R.drawable.ic_back),
+                            contentDescription = "Back",
+                            tint               = contentColor,
+                            modifier           = Modifier.size(22.dp)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        scope.launch {
+                            movie?.let {
+                                viewModel.addToWatchlist()
+                                snackbarHostState.showSnackbar("${it.title} added to watchlist")
+                            }
+                        }
+                    }) {
+                        Icon(
+                            painter           = painterResource(R.drawable.ic_watchlist),
+                            contentDescription = "Save to Watchlist",
+                            tint               = contentColor,
+                            modifier           = Modifier.size(22.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor             = bgColor,
+                    navigationIconContentColor = contentColor,
+                    titleContentColor          = contentColor,
+                    actionIconContentColor     = contentColor
+                )
+            )
+        },
+
+        bottomBar = {
+            AnimatedNavigationBar(
+                navController  = navController,
+                currentRoute   = Screen.MovieDetails.route,
+                onNavigate     = { route -> navController.navigate(route) }
+            )
+        }
+    ) { innerPadding ->
+        val cfg         = LocalConfiguration.current
+        val isLandscape = cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        if (isLandscape) {
+            // Two-column layout
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .background(bgColor)
+                    .padding(innerPadding)
+            ) {
+
+
+                MediaSection(
+                    movie       = movie,
+                    onPlayClick = onPlayClick as () -> Unit,            // ← supply it here
+                    modifier    = Modifier
+                        .weight(1f)
+                        .height(430.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                )
+
+                Spacer(Modifier.width(16.dp))
+
+                // Right: title, genres, synopsis, actors
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(bgColor)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    // Inline title
+                    Text(
+                        text     = movie?.title.orEmpty(),
+                        color    = contentColor,
+                        style    = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
+                    // Genres row
+                    GenreRow(movie, contentColor)
+                    // Synopsis
+                    SynopsisSection(movie, contentColor)
+                    // Actors
+                    ActorsSection(contentColor)
+                }
+            }
+        } else {
+            // Portrait: vertical list
+            LazyColumn(
+                Modifier
+                    .fillMaxSize()
+                    .background(bgColor)
+                    .padding(innerPadding)
+            ) {
+                // Poster
+                item {
+                    MediaSection(
+                        movie    = movie,
+                        onPlayClick = onPlayClick as () -> Unit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                }
+
+                // Inline title above genres
+                item {
+                    Text(
+                        text     = movie?.title.orEmpty(),
+                        color    = contentColor,
+                        style    = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+
+                // Genres
+                item { GenreRow(movie, contentColor) }
+
+                // Synopsis
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    SynopsisSection(movie, contentColor)
+                }
+
+                // Actors carousel
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    ActorsSection(contentColor)
+                }
             }
         }
     }
 }
+
+@Composable
+private fun GenreRow(movie: Movie?, contentColor: Color) {
+    Spacer(Modifier.height(8.dp))
+    // collect only non-null, non-blank genres
+    val genres = movie?.let {
+        listOfNotNull(it.genre_one, it.genre_two, it.genre_three)
+            .filter { it.isNotBlank() }
+    } ?: emptyList()
+
+    if (genres.isEmpty()) return
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        genres.forEach { genre ->
+            AssistChip(
+                onClick = { /* no-op */ },
+                label = {
+                    Text(
+                        text  = genre,
+                        color = contentColor
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = contentColor.copy(alpha = 0.12f),
+                    labelColor     = contentColor
+                )
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun SynopsisSection(movie: Movie?, contentColor: Color) {
+    Spacer(Modifier.height(8.dp))
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Text(
+            text     = "Synopsis",
+            color    = contentColor,
+            style    = MaterialTheme.typography.titleMedium,
+            fontSize = 20.sp
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text  = movie?.description.orEmpty(),
+            color = contentColor,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+private fun ActorsSection(contentColor: Color) {
+    Spacer(Modifier.height(16.dp))
+    Text(
+        text     = "Actors",
+        color    = contentColor,
+        style    = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+    )
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding       = PaddingValues(horizontal = 16.dp)
+    ) {
+        items(5) { idx ->
+            ActorCard(idx)
+        }
+    }
+}
+
+@Composable
+private fun ActorCard(index: Int) {
+    Card(
+        modifier  = Modifier.size(width = 100.dp, height = 160.dp),
+        shape     = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Image(
+            painter           = painterResource(R.drawable.bignight),
+            contentDescription = "Actor ${index + 1}",
+            contentScale       = ContentScale.Crop,
+            modifier           = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+private fun MediaSection(
+    movie: Movie?,
+    onPlayClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        // Load the drawable-by-name or fallback
+        val ctx = LocalContext.current
+        val resId = remember(movie?.imageName) {
+            movie?.let {
+                ctx.resources.getIdentifier(
+                    it.imageName, "drawable", ctx.packageName
+                )
+            } ?: R.drawable.bignight
+        }
+
+        AsyncImage(
+            model               = resId,
+            contentDescription  = movie?.title.orEmpty(),
+            contentScale        = ContentScale.Crop,
+            modifier            = Modifier.fillMaxSize()
+        )
+
+        // Black fade gradient
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                        Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.7f)
+                    )
+                )
+        )
+
+        // Play button
+        IconButton(
+            onClick = onPlayClick,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.6f))
+        ) {
+            Icon(
+                painter           = painterResource(R.drawable.ic_play),
+                contentDescription = "Play",
+                tint               = Color.White,
+                modifier           = Modifier.size(32.dp)
+            )
+        }
+    }
+}
+

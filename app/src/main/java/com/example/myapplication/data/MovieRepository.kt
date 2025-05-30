@@ -6,29 +6,30 @@ import javax.inject.Singleton
 
 @Singleton
 class MovieRepository @Inject constructor(
-    private val dao: MovieDao
+    private var dao: MovieDao
 ) {
-    /** Stream of all movies in alphabetical order */
-    val allMovies: Flow<List<Movie>> = dao.getAllMovies()
 
-    /** Stream of only those flagged watchlisted */
-    val watchlist: Flow<List<Movie>> = dao.getWatchlistedMovies()
+    val watchlist: Flow<List<Movie>> = dao.getWatchlistFlow()
 
-    /** Update a single movie row (e.g. toggle watchlist flag) */
-    suspend fun updateMovie(movie: Movie) {
-        dao.update(movie)
-    }
+    fun getYears(): Flow<List<Int>> = dao.getDistinctYears()
 
-    /** Alias so UI can call `repo.update(...)` directly */
+    fun getAllMovies(): Flow<List<Movie>> = dao.getAllMovies()
+
+    fun getMovieById(id: Int): Flow<Movie?> = dao.getMovieById(id)
+
+    suspend fun updateMovie(movie: Movie) { dao.update(movie) }
+
+    val watchlistFlow: Flow<List<Movie>> = dao.getWatchlistFlow()
+
+    suspend fun setWatchlistFlag(id: Int, watchlisted: Boolean) { dao.updateWatchlistFlag(id.toString(), watchlisted) }
+
     suspend fun update(movie: Movie) = updateMovie(movie)
 
-    /** Bulk-insert seed data */
-    suspend fun insertAll(movies: List<Movie>) {
-        dao.insertAll(movies)
-    }
+    suspend fun insertAll(movies: List<Movie>) { dao.insertAll(movies) }
 
-    /** Toggle the watchlist flag on a movie row */
-    suspend fun setWatchlisted(id: Int, watch: Boolean) {
-        dao.setWatchlisted(id, watch)
-    }
+    suspend fun setWatchlisted(id: Int, watch: Boolean) { dao.setWatchlisted(id, watch) }
+
+    suspend fun removeFromWatchlist(id: String) { dao.updateWatchlistFlag(id, false) }
+
+    suspend fun addToWatchlist(movie: Movie) { dao.upsert(movie.copy(isWatchlisted = true)) }
 }

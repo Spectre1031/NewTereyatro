@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "mmff_movies")
 data class Movie(
     @PrimaryKey(autoGenerate = true)
-    val movie_id: Int = 0,
+    val id: Int = 0,
 
     val title: String,
     val description: String,
@@ -24,6 +24,9 @@ data class Movie(
     val award_one: String,
     val award_two: String,
     val award_three: String,
+
+    // trailer
+    val trailerUrl: String? = null,
 
     // watchlist flag
     val isWatchlisted: Boolean = false
