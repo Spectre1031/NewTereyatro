@@ -5,64 +5,80 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
-import com.example.myapplication.ui.*
 import dagger.hilt.android.AndroidEntryPoint
+import com.example.myapplication.ui.*
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val navController = rememberNavController()
-            val backStack    by navController.currentBackStackEntryAsState()
-            val currentRoute = backStack?.destination?.route ?: Screen.Home.route
-
             MaterialTheme {
-                    NavHost(
-                        navController    = navController,
-                        startDestination = Screen.Home.route,
-                        modifier         = Modifier.padding()
+                val navController = rememberNavController()
+
+                // ── Hoist your language state ──
+                var currentLanguage by rememberSaveable { mutableStateOf("en") }
+
+                NavHost(
+                    navController    = navController,
+                    startDestination = Screen.Home.route,
+                    modifier         = Modifier.padding()
+                ) {
+                    // Home
+                    composable(Screen.Home.route) {
+                        HomePage(
+                            navController    = navController,
+                            currentLanguage  = currentLanguage,
+                            onLanguageChange = { currentLanguage = it }
+                        )
+                    }
+
+                    // Search
+                    composable(Screen.Search.route) {
+                        SearchPage(
+                            navController    = navController,
+                            currentLanguage  = currentLanguage,
+                            onLanguageChange = { currentLanguage = it }
+                        )
+                    }
+
+                    // Watchlist
+                    composable(Screen.Watchlist.route) {
+                        WatchlistScreen(
+                            navController            = navController,
+                            currentLanguage          = currentLanguage,
+                            onLanguageChange         = { currentLanguage = it },
+                            onNavigateToMovieDetails = { movieId ->
+                                // ➌ Use the same createRoute() helper:
+                                navController.navigate(
+                                    Screen.MovieDetails.createRoute(movieId)
+                                )
+                            }
+                        )
+                    }
+
+                    // Movie Details
+                    composable(
+                        route     = Screen.MovieDetails.routeWithArg,      // must match exactly
+                        arguments = listOf(navArgument("movieId") {
+                            type = NavType.IntType
+                        })
                     ) {
-                        // Home
-                        composable(Screen.Home.route) {
-                            HomePage(navController)
-                        }
-                        // Search
-                        composable(Screen.Search.route) {
-                            SearchPage(navController)
-                        }
-                        // Watchlist
-                        composable(Screen.Watchlist.route) {
-                            WatchlistScreen(
-                                navController             = navController,
-                                onNavigateToMovieDetails = { movieId ->
-                                    navController.navigate(Screen.MovieDetails.createRoute(movieId.toInt()
-                                        .toString()))
-                                }
-                            )
-                        }
-
-
-                        composable(
-                            route = Screen.MovieDetails.route,            // e.g. "movieDetails/{movieId}"
-                            arguments = listOf(navArgument("movieId") {
-                                type = NavType.IntType
-                            })
-                        ) {
-                            // THIS will instantiate MovieDetailsViewModel and supply 'movieId'
-                            MovieDetailsPage(
-                                navController  = navController,
-                                onBackClick    = { navController.popBackStack() }
-                            )
-                        }
+                        MovieDetailsPage(
+                            navController    = navController,
+                            currentLanguage  = currentLanguage,
+                            onLanguageChange = { currentLanguage = it },
+                            onBackClick      = { navController.popBackStack() }
+                        )
                     }
                 }
             }
         }
     }
+}

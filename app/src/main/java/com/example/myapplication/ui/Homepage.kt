@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -24,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.myapplication.AnimatedNavigationBar
 import com.example.myapplication.Screen
 import com.example.myapplication.data.Movie
 import com.example.myapplication.ui.viewmodel.HomeViewModel
@@ -32,6 +32,8 @@ import com.example.myapplication.ui.viewmodel.HomeViewModel
 @Composable
 fun HomePage(
     navController: NavHostController,
+    currentLanguage: String,
+    onLanguageChange: (String)->Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val isDark = isSystemInDarkTheme()
@@ -49,9 +51,11 @@ fun HomePage(
         contentColor   = contentColor,
         bottomBar = {
             AnimatedNavigationBar(
-                navController = navController,
-                currentRoute  = Screen.Home.route,
-                onNavigate    = { route -> navController.navigate(route) }
+                navController     = navController,
+                currentRoute      = Screen.Home.route,
+                currentLanguage   = currentLanguage,
+                onNavigate        = { route -> navController.navigate(route) },
+                onLanguageChange  = onLanguageChange
             )
         }
     ) { innerPadding ->

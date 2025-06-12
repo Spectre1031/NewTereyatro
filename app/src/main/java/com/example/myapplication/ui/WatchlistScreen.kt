@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.myapplication.AnimatedNavigationBar
 import com.example.myapplication.Screen
 import com.example.myapplication.data.Movie
 import com.example.myapplication.ui.theme.appBackgroundColor
@@ -35,6 +36,8 @@ import com.example.myapplication.ui.viewmodel.WatchlistViewModel
 fun WatchlistScreen(
     navController: NavHostController,
     onNavigateToMovieDetails: (String) -> Unit,
+    currentLanguage: String,
+    onLanguageChange: (String)->Unit,
     viewModel: WatchlistViewModel = hiltViewModel()
 ) {
     val watchlistMovies by viewModel.watchlistFlow.collectAsState()
@@ -56,9 +59,11 @@ fun WatchlistScreen(
         },
         bottomBar = {
             AnimatedNavigationBar(
-                navController  = navController,
-                currentRoute   = Screen.Watchlist.route,
-                onNavigate     = { route -> navController.navigate(route) }
+                navController     = navController,
+                currentRoute      = Screen.Watchlist.route,
+                currentLanguage   = currentLanguage,
+                onNavigate        = { route -> navController.navigate(route) },
+                onLanguageChange  = onLanguageChange
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }

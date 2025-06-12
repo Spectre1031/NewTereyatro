@@ -2,7 +2,6 @@ package com.example.myapplication.ui
 
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Divider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -15,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,12 +33,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.myapplication.AnimatedNavigationBar
 import com.example.myapplication.Screen
 import com.example.myapplication.ui.viewmodel.MovieViewModel
 
 @Composable
 fun SearchPage(
     navController: NavHostController,
+    currentLanguage: String,
+    onLanguageChange: (String)->Unit,
     viewModel: MovieViewModel = hiltViewModel()
 ) {
     // 1. Get your movie list (LiveData → Compose state)
@@ -76,9 +77,11 @@ fun SearchPage(
         contentColor   = contentColor,
         bottomBar = {
             AnimatedNavigationBar(
-                navController  = navController,
-                currentRoute   = Screen.Search.route,
-                onNavigate     = { route -> navController.navigate(route) }
+                navController     = navController,
+                currentRoute      = Screen.Search.route,
+                currentLanguage   = currentLanguage,
+                onNavigate        = { route -> navController.navigate(route) },
+                onLanguageChange  = onLanguageChange
             )
         }
     ) { innerPadding ->
@@ -163,7 +166,7 @@ fun SearchPage(
                 // Year button
                 var expandedYear by remember { mutableStateOf(false) }
                 Box(Modifier.weight(1f)) {
-                    FilledTonalButton(
+                    OutlinedButton(
                         onClick  = { expandedYear = true },
                         shape    = RoundedCornerShape(24.dp),
                         modifier = Modifier
