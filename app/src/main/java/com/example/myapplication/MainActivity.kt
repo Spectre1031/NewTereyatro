@@ -22,7 +22,6 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val navController = rememberNavController()
 
-                // ── Hoist your language state ──
                 var currentLanguage by rememberSaveable { mutableStateOf("en") }
 
                 NavHost(
@@ -30,7 +29,6 @@ class MainActivity : ComponentActivity() {
                     startDestination = Screen.Home.route,
                     modifier         = Modifier.padding()
                 ) {
-                    // Home
                     composable(Screen.Home.route) {
                         HomePage(
                             navController    = navController,
@@ -39,7 +37,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Search
                     composable(Screen.Search.route) {
                         SearchPage(
                             navController    = navController,
@@ -48,14 +45,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Watchlist
                     composable(Screen.Watchlist.route) {
                         WatchlistScreen(
                             navController            = navController,
                             currentLanguage          = currentLanguage,
                             onLanguageChange         = { currentLanguage = it },
                             onNavigateToMovieDetails = { movieId ->
-                                // ➌ Use the same createRoute() helper:
                                 navController.navigate(
                                     Screen.MovieDetails.createRoute(movieId)
                                 )
@@ -63,9 +58,8 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Movie Details
                     composable(
-                        route     = Screen.MovieDetails.routeWithArg,      // must match exactly
+                        route     = Screen.MovieDetails.routeWithArg,
                         arguments = listOf(navArgument("movieId") {
                             type = NavType.IntType
                         })

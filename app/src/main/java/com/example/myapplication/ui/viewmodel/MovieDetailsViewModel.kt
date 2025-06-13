@@ -20,12 +20,10 @@ class MovieDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // 1) grab movieId from nav args
     private val movieId: Int = checkNotNull(savedStateHandle["movieId"]) {
         "MovieDetailsViewModel: missing movieId"
     }
 
-    // 2) stream the Movie? from your DAO
     val movieFlow: StateFlow<Movie?> = repo
         .getMovieById(movieId)
         .stateIn(
@@ -34,18 +32,11 @@ class MovieDetailsViewModel @Inject constructor(
             initialValue= null
         )
 
-    // 3) hold the translated synopsis
     private val _synopsis = MutableStateFlow<String>("")
     val synopsis: StateFlow<String> = _synopsis.asStateFlow()
 
-    /**
-     * 4) Call this whenever the user flips the language toggle.
-     *    It fetches the original synopsis (in English) then,
-     *    if needed, translates to Tagalog via LibreTranslate.
-     */
     fun loadSynopsis(targetLang: String) {
-        viewModelScope.launch {
-            // original text (or empty)
+        viewModelScope.launch { 
             val original = movieFlow.value?.description.orEmpty()
 
             _synopsis.value = if (targetLang == "en") {
@@ -56,10 +47,6 @@ class MovieDetailsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 5) Add the current movie to watchlist.
-     *    Called by your top‐bar “+” button.
-     */
     fun addToWatchlist() {
         viewModelScope.launch {
             movieFlow.value?.let { repo.addToWatchlist(it) }

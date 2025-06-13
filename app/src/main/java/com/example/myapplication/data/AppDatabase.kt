@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Movie::class],
-    version  = 7,                // <-- bumped
+    version  = 7,                // bump when changing the schema
     exportSchema = false
 )
 abstract class      AppDatabase : RoomDatabase() {

@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,34 +29,36 @@ import coil.compose.AsyncImage
 import com.example.myapplication.AnimatedNavigationBar
 import com.example.myapplication.Screen
 import com.example.myapplication.data.Movie
-import com.example.myapplication.ui.theme.appBackgroundColor
-import kotlinx.coroutines.launch
 import com.example.myapplication.ui.viewmodel.WatchlistViewModel
+import kotlinx.coroutines.launch
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WatchlistScreen(
     navController: NavHostController,
     onNavigateToMovieDetails: (String) -> Unit,
     currentLanguage: String,
-    onLanguageChange: (String)->Unit,
+    onLanguageChange: (String) -> Unit,
     viewModel: WatchlistViewModel = hiltViewModel()
 ) {
-    val watchlistMovies by viewModel.watchlistFlow.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var isEditMode by remember { mutableStateOf(false) }
+    val watchlistMovies    by viewModel.watchlistFlow.collectAsState()
+    val snackbarHostState  = remember { SnackbarHostState() }
+    val scope              = rememberCoroutineScope()
+    var isEditMode         by remember { mutableStateOf(false) }
+    var pendingRemoveId    by remember { mutableStateOf<String?>(null) }
+
     val isDark       = isSystemInDarkTheme()
     val bgColor      = if (isDark) Color.Black else Color.White
     val contentColor = if (isDark) Color.White else Color.Black
+    val popUp = if (isDark) Color.White else Color.Gray
 
     Scaffold(
         containerColor = bgColor,
         contentColor   = contentColor,
         topBar = {
             WatchlistHeader(
-                isEditMode = isEditMode,
-                onEditModeToggle = { isEditMode = !isEditMode }
+                isEditMode        = isEditMode,
+                onEditModeToggle  = { isEditMode = !isEditMode }
             )
         },
         bottomBar = {
@@ -68,7 +72,6 @@ fun WatchlistScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        // compute columns
         val screenWidthDp = LocalConfiguration.current.screenWidthDp
         val columns = when {
             screenWidthDp >= 840 -> 4
@@ -77,34 +80,52 @@ fun WatchlistScreen(
         }
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            modifier = Modifier
+            columns             = GridCells.Fixed(columns),
+            modifier            = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(8.dp),
+            contentPadding      = PaddingValues(8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement   = Arrangement.spacedBy(16.dp)
         ) {
             items(
                 items = watchlistMovies,
                 key   = { it.id }
-            ) { movie: Movie ->
+            ) { movie ->
                 MoviePoster(
                     movie                    = movie,
                     isEditMode               = isEditMode,
-                    onRemove                 = { removedId ->
-                        scope.launch {
-                            viewModel.removeFromWatchlist(removedId)
-                            snackbarHostState.showSnackbar(
-                                message = "Removed “${movie.title}” from watchlist.",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
-                    },
+                    onRemove                 = { pendingRemoveId = it },
                     onNavigateToMovieDetails = onNavigateToMovieDetails,
                     columns                  = columns
                 )
             }
+        }
+
+        pendingRemoveId?.let { movieId ->
+            AlertDialog(
+                onDismissRequest = { pendingRemoveId = null },
+                containerColor   = bgColor,
+                title            = { Text("Remove from Watchlist", color = contentColor) },
+                text             = { Text("Are you sure you want to remove this movie from your watchlist?", color = contentColor) },
+                confirmButton    = {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                viewModel.removeFromWatchlist(movieId)
+                                snackbarHostState.showSnackbar(
+                                    "Removed from watchlist.",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                            pendingRemoveId = null
+                        }
+                    ) { Text("Yes", color = contentColor) }
+                },
+                dismissButton    = {
+                    TextButton(onClick = { pendingRemoveId = null }) { Text("No", color = contentColor) }
+                }
+            )
         }
     }
 }
@@ -119,10 +140,9 @@ private fun WatchlistHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()     // ← adds top padding for the status bar
+            .statusBarsPadding()
             .padding(10.dp)
     ) {
-        // Centered title
         Text(
             text     = if (isEditMode) "Remove from Watchlist" else "Your Watchlist",
             fontSize = 18.sp,
@@ -130,15 +150,15 @@ private fun WatchlistHeader(
             modifier = Modifier.align(Alignment.Center)
         )
 
-        // Edit / Done button at the end
         IconButton(
-            onClick = onEditModeToggle,
+            onClick  = onEditModeToggle,
             modifier = Modifier.align(Alignment.CenterEnd)
         ) {
             Icon(
                 imageVector        = if (isEditMode) Icons.Default.Check else Icons.Default.Edit,
                 contentDescription = if (isEditMode) "Done" else "Edit",
-                modifier           = Modifier.size(20.dp)
+                modifier           = Modifier.size(20.dp),
+                tint               = textColor
             )
         }
     }
@@ -152,10 +172,10 @@ private fun MoviePoster(
     onNavigateToMovieDetails: (String) -> Unit,
     columns: Int
 ) {
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val horizontalPadding = 16.dp
-    val cardWidth  = (screenWidth / columns) - horizontalPadding
-    val cardHeight = cardWidth * 1.625f
+    val screenWidth   = LocalConfiguration.current.screenWidthDp.dp
+    val horizontalPad = 16.dp
+    val cardWidth     = (screenWidth / columns) - horizontalPad
+    val cardHeight    = cardWidth * 1.625f
 
     Card(
         modifier = Modifier
@@ -170,11 +190,7 @@ private fun MoviePoster(
         Box(Modifier.fillMaxSize()) {
             val ctx     = LocalContext.current
             val imageId = remember(movie.imageName) {
-                ctx.resources.getIdentifier(
-                    movie.imageName,
-                    "drawable",
-                    ctx.packageName
-                )
+                ctx.resources.getIdentifier(movie.imageName, "drawable", ctx.packageName)
             }
 
             if (imageId != 0) {
@@ -186,7 +202,7 @@ private fun MoviePoster(
                 )
             } else {
                 Box(
-                    modifier         = Modifier
+                    Modifier
                         .fillMaxSize()
                         .background(Color.LightGray),
                     contentAlignment = Alignment.Center
@@ -197,8 +213,8 @@ private fun MoviePoster(
 
             if (isEditMode) {
                 IconButton(
-                    onClick = { onRemove(movie.id.toString()) },
-                    modifier = Modifier
+                    onClick    = { onRemove(movie.id.toString()) },
+                    modifier   = Modifier
                         .align(Alignment.TopEnd)
                         .padding(4.dp)
                         .size(28.dp)

@@ -17,7 +17,6 @@ class WatchlistViewModel @Inject constructor(
     val watchlistFlow = repo.watchlistFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    /** Called by the UI when the delete-icon is tapped */
     fun removeFromWatchlist(id: String) {
         viewModelScope.launch {
             repo.removeFromWatchlist(id)

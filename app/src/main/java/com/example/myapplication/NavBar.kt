@@ -92,35 +92,42 @@ fun AnimatedNavigationBar(
     }
 
     // Popup to confirm language switch
-    if (showLanguageDialog) {
-        AlertDialog(
-            onDismissRequest = { showLanguageDialog = false },
-            title   = { Text("Switch Language") },
-            text    = {
-                Text(
-                    if (currentLanguage == "en")
-                        "Switch interface to Tagalog?"
-                    else
-                        "Switch interface to English?"
+            if (showLanguageDialog) {
+                val isDark       = isSystemInDarkTheme()
+                val dialogBg     = if (isDark) Color.Black else Color.White
+                val dialogContent = if (isDark) Color.White else Color.Black
+
+                AlertDialog(
+                    onDismissRequest = { showLanguageDialog = false },
+                    containerColor   = dialogBg,
+
+                    title   = { Text("Switch Language", color = dialogContent) },
+                    text    = {
+                        Text(
+                            if (currentLanguage == "en")
+                                "Switch interface to Tagalog?"
+                            else
+                                "Switch interface to English?",
+                                        color = dialogContent
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val newLang = if (currentLanguage == "en") "tl" else "en"
+                            onLanguageChange(newLang)
+                            showLanguageDialog = false
+                        }) {
+                            Text("Yes", color = dialogContent   )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showLanguageDialog = false }) {
+                            Text("No", color = dialogContent)
+                        }
+                    }
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val newLang = if (currentLanguage == "en") "tl" else "en"
-                    onLanguageChange(newLang)
-                    showLanguageDialog = false
-                }) {
-                    Text("Yes")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLanguageDialog = false }) {
-                    Text("No")
-                }
             }
-        )
-    }
-}
+        }
 
 @Composable
 private fun RowScope.NavItem(
